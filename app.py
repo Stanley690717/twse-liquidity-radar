@@ -21,9 +21,8 @@ headers = {
 def fetch_past_7_days(now_dt):
     history_records = []
     current_check = now_dt
-    loop_count = 0  # 💡 防禦性安全計數器
+    loop_count = 0 
     
-    # 雙重安全防線：收集滿7天 或 嘗試回溯超過15個工作天 則強制熔斷跳出，拒絕無限迴圈
     while len(history_records) < 7 and loop_count < 15:
         if current_check.weekday() in [5, 6]:
             current_check -= datetime.timedelta(days=1)
@@ -38,7 +37,6 @@ def fetch_past_7_days(now_dt):
         d_url = f"https://www.twse.com.tw/exchangeReport/TWTB4U?response=json&date={date_str}&selectType=All"
         
         try:
-            # 💡 關鍵修正：導入 timeout=5，一旦被證交所 WAF 丟棄封包，5秒內強制中斷，避免 Socket 永久凍結
             m_res = requests.get(m_url, headers=headers, timeout=5).json()
             time.sleep(1.0)
             d_res = requests.get(d_url, headers=headers, timeout=5).json()
@@ -108,7 +106,6 @@ if not df_history.empty:
     
     st.write(f"📊 最新觀測交易日：**{latest_date}**")
     
-    # 💡 雲端友善提示：若因限流導致天數不足，自動跳出警告而非直接崩潰
     if len(df_history) < 7:
         st.warning(f"⚠️ 提示：因雲端共用 IP 受證交所流控限制，目前成功調取 {len(df_history)} 天數據。")
     
@@ -129,7 +126,6 @@ if not df_history.empty:
     min_r, max_r = min(ratios) - 2, max(ratios) + 2
     svg_w, svg_h, pad_x, pad_y = 600, 180, 50, 30
     
-    # 💡 零分母防禦機制
     denom_x = max(1, len(ratios) - 1)
     denom_y = max(0.1, max_r - min_r)
     
@@ -170,12 +166,9 @@ if not df_history.empty:
     with st.expander("📋 查看歷史數據明細"):
         st.dataframe(df_history[["📋 日期", "大盤成交量(億)", "當沖佔比(%)"]], use_container_width=True)
 
-    if ratio > 50:
-        st.error(f"🚨 【極端紅色警戒】最新當沖破 50% (目前 {ratio:.1f}%)！")
-    elif ratio > 40:
-        st.warning("⚠️ 【投機升溫】籌碼浮躁，大盤處於高檔震盪。")
-    else:
-        st.success("✅ 【籌碼穩定】目前市場結構健康。")
+    if ratio > 50: st.error(f"🚨 【極端紅色警戒】最新當沖破 50% ！")
+    elif ratio > 40: st.warning("⚠️ 【投機升溫】籌碼浮躁，大盤處於高檔震盪。")
+    else: st.success("✅ 【籌碼穩定】目前市場結構健康。")
 
     st.info("💡 Stanley 軍規提醒：\n- 00878 剩餘 2 部分，不到 21% 獲利不動手。\n- 資金已還款存放於理財房貸，信用額度安全。")
 else:
